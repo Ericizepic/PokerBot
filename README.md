@@ -1,15 +1,17 @@
 # PokerBot
 Poker bot
 
-This project was inspired by Libratus AI and seeks to tackle the imperfect information game of heads up no limit holdem. I made this only to learn more about data science and poker.
-
-Initial gameplay data was taken from http://kevinwang.us/lets-analyze-pluribuss-hands/
-
-...Training algorithm...
-
-I tested this against the online headsup poker bot slumbot whose api is available here https://www.slumbot.com/
-
-The results:
+Implementation of counter factual regret minimization with public chance sampling [[1]](#1) on the game of texas holdem. Several abstractions were
+used to reduce the number of game states [[2]](#2)
 
 
+![alt text](image.png)
+
+
+
+## References
+<a id="1">[1]</a> 
+DJohanson, Michael, et al. "Efficient Nash equilibrium approximation through Monte Carlo counterfactual regret minimization." Aamas. 2012.
+<a id="2">[2]</a> 
+Zinkevich, Martin, et al. "Regret minimization in games with incomplete information." Advances in neural information processing systems 20 (2007).
 
