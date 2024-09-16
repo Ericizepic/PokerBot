@@ -3,8 +3,8 @@
 
 Deck::Deck() {
     cards = defaultDeckCards;
-    auto rng = std::default_random_engine {};
-    std::shuffle(cards.begin(), cards.end(), rng);
+
+    std::random_shuffle(cards.begin(), cards.end());
 
     playerCards = std::vector<std::vector<int>>(2, std::vector<int>(0));
     playerCards[0].push_back(cards[0]);

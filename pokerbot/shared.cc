@@ -1,4 +1,5 @@
 #include "shared.h"
+#include <omp.h>
 
 int get_rank(const int holeCard1, const int holeCard2, const std::vector<int> &communityCards)
 {
@@ -23,19 +24,22 @@ int get_rank(const int holeCard1, const int holeCard2, const std::vector<int> &c
 
 double eval_runout(const int ourcard1, const int ourcard2, const std::vector<int> &finalCommunityCards, const std::vector<int> &unseenbyriver)
 {
-    std::vector<int> outcome(3);
-    int ourrank = get_rank(ourcard1, ourcard2, finalCommunityCards);
+    const int ourrank = get_rank(ourcard1, ourcard2, finalCommunityCards);
+    double num = 0;
+    double denom = (unseenbyriver.size() - 1)*(unseenbyriver.size())/2.0;
 
     for (int m = 0; m< unseenbyriver.size(); m++) {
         for (int n = m + 1; n<unseenbyriver.size(); n++)
         {
             int opprank = get_rank(unseenbyriver[m], unseenbyriver[n], finalCommunityCards);
-            if (ourrank < opprank) outcome[0] += 1;
-            else if (ourrank == opprank) outcome[1] += 1;
-            else outcome[2] +=1;
+            int val = 0;
+            if (ourrank < opprank) val = 1;
+            else if (ourrank == opprank) val = 0.5;
+
+            num += val;
         }
     }
-    return (outcome[0] + outcome[1]/2.0)/(outcome[0] + outcome[1] + outcome[2]);
+    return num/denom;
 }
 
 double ehs2(const std::vector<int> &ourcards, const std::vector<int> &seenCommunityCards)
@@ -47,6 +51,7 @@ double ehs2(const std::vector<int> &ourcards, const std::vector<int> &seenCommun
     
     if (seenCommunityCards.size() == 3)
     {
+        #pragma omp parallel for reduction(+: res)
         for (int i = 0; i< unseen.size(); i++) {
             for (int j = i + 1; j<unseen.size(); j++)
             {
@@ -60,9 +65,9 @@ double ehs2(const std::vector<int> &ourcards, const std::vector<int> &seenCommun
 
                 double hs = eval_runout(ourcards[0], ourcards[1], finalCommunityCards, unseenbyriver);
                 res += hs*hs;
-                sum +=1;
             }
         }
+        sum = (unseen.size())*(unseen.size() - 1)/2;
     }
     if (seenCommunityCards.size() == 4)
     {
@@ -85,6 +90,7 @@ double ehs2(const std::vector<int> &ourcards, const std::vector<int> &seenCommun
         double hs = eval_runout(ourcards[0], ourcards[1], finalCommunityCards, unseenbyriver);
         res += hs*hs;
         sum +=1;
+        
     }
     return res/sum;
 }

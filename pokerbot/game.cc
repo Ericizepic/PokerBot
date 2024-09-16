@@ -3,7 +3,7 @@
 typedef std::chrono::high_resolution_clock Clock;
 
 
-Game::Game() : root0(new InfoSetNode()), root1(new InfoSetNode()), deck(nullptr), iter(1) {}
+Game::Game() : root0(new InfoSetNode()), root1(new InfoSetNode()), deck(nullptr), iter(0) {}
     
 Game::~Game() { delete root0; delete root1;}
 
@@ -15,54 +15,53 @@ std::pair<double, double> Game::cfr(
     std::vector<double> bet_sizes,
     double pot_size, 
     int round_num, 
+    int player,
     double p0, 
     double p1)
 {
     if (is_terminal(history, round_num))
         return get_utility(remaining_stacks, bet_sizes, pot_size);
+
+    if (r0->children.size() == 0)
+    {
+        r0->init_children();
+    }
+    if (r1->children.size() == 0)
+    {
+        r1->init_children();
+    }
+
     if (is_non_terminal_round_end(history))
     {
-        if (r0->children.size() == 0)
-        {
-            r0->init_children();
-            r1->init_children();
-        }
-
         int next_round_num = (round_num==0) ? round_num + 3 : round_num + 1;
         std::vector<std::string> next_hist = history;
         next_hist.push_back("|");
 
         auto t = get_next_stacks_bets_pot("|", remaining_stacks, bet_sizes, pot_size, 2);
+
         int bucket0 = get_bucket(next_round_num, 0), bucket1 = get_bucket(next_round_num, 1);
 
-        return cfr(r0->children[bucket0], r1->children[bucket1], next_hist, std::get<0>(t), std::get<1>(t), std::get<2>(t), next_round_num, p0, p1);
+        return cfr(r0->children[bucket0], r1->children[bucket1], next_hist, std::get<0>(t), std::get<1>(t), std::get<2>(t), next_round_num, 0, p0, p1);
     }
-        
-    int player = get_player(history);
+    
+    // int player = get_player(history);
     std::vector<double> state_action_util_0(NUM_BUCKETS, 0);
     std::vector<double> state_action_util_1(NUM_BUCKETS, 0);
-    std::vector<std::string> ACTIONS = get_actions(history, remaining_stacks, bet_sizes, pot_size, player);
+    std::vector<int> ACTIONS = get_actions(history, remaining_stacks, bet_sizes, pot_size, player);
     double u0 = 0, u1 = 0;
 
     std::vector<double> strat = (player == 0) ? r0->get_strat() : r1->get_strat();
 
-    for (int i = 0; i<ACTIONS.size(); i++)
+    for (auto i : ACTIONS)
     {
         std::vector<std::string> next_hist = history;
-        next_hist.push_back(ACTIONS[i]);
+        next_hist.push_back(ALL_ACTIONS[i]);
 
-        auto t = get_next_stacks_bets_pot(ACTIONS[i], remaining_stacks, bet_sizes, pot_size, player);
-
-        if (r0->children.size() == 0 || r1->children.size() == 0)
-        {
-            r0->init_children();
-            r1->init_children();
-        }
-
+        auto t = get_next_stacks_bets_pot(ALL_ACTIONS[i], remaining_stacks, bet_sizes, pot_size, player);
         double nextp0 = (player == 0) ? strat[i]*p0 : p0;
         double nextp1 = (player == 1) ? strat[i]*p1 : p1;
 
-        std::pair<double, double> ua = cfr(r0->children[i], r1->children[i], next_hist, std::get<0>(t), std::get<1>(t) , std::get<2>(t), round_num, nextp0, nextp1);
+        std::pair<double, double> ua = cfr(r0->children[i], r1->children[i], next_hist, std::get<0>(t), std::get<1>(t) , std::get<2>(t), round_num, 1 - player, nextp0, nextp1);
         state_action_util_0[i] = ua.first;
         state_action_util_1[i] = ua.second;
         u0 += state_action_util_0[i]*strat[i];
@@ -71,12 +70,12 @@ std::pair<double, double> Game::cfr(
 
     if (player == 0)
     {
-        for (int i = 0; i<r0->regretSum.size(); i++)
+        for (int i = 0; i<NUM_BUCKETS; i++)
             r0->regretSum[i] = (iter*r0->regretSum[i] + p1*(state_action_util_0[i] - u0))/(iter + 1);
     }
     else
     {
-        for (int i = 0; i<r0->regretSum.size(); i++)
+        for (int i = 0; i<NUM_BUCKETS; i++)
             r1->regretSum[i] = (iter*r1->regretSum[i] + p0*(state_action_util_1[i] - u1))/(iter + 1);
     }
 
@@ -104,17 +103,6 @@ bool Game::is_terminal(std::vector<std::string> history, int round_num){
     bool is_fold = len >= 1 && history[len-1] == "f";
 
     return is_river_terminal || is_all_in_call || is_fold;
-}
-
-
-int Game::get_player(std::vector<std::string> history){
-    int player = 0;
-    for (int i = 0; i<history.size(); i++)
-    {
-        if (history[i] == "|") player = 0;
-        player = 1 - player;
-    }
-    return player;
 }
 
 
@@ -147,16 +135,16 @@ std::tuple<std::vector<double>, std::vector<double>, double> Game::get_next_stac
 }
 
 
-std::vector<std::string> Game::get_actions(std::vector<std::string> history, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player){
-    std::vector<std::string> allowed_actions = ALL_ACTIONS;
-    if (3*bet_sizes[1 - player] + pot_size > remaining_stacks[player])
-        allowed_actions.erase(std::remove(allowed_actions.begin(), allowed_actions.end(), "r100"), allowed_actions.end());
-    if (2*bet_sizes[1 - player] + 0.5*pot_size > remaining_stacks[player])
-        allowed_actions.erase(std::remove(allowed_actions.begin(), allowed_actions.end(), "r50"), allowed_actions.end());
-    if (history.size() > 0 && history.back() == "a")
-        allowed_actions.erase(std::remove(allowed_actions.begin(), allowed_actions.end(), "a"), allowed_actions.end());
-    if (bet_sizes[1 - player] == 0)
-        allowed_actions.erase(std::remove(allowed_actions.begin(), allowed_actions.end(), "f"), allowed_actions.end()); // not disallowed but there is no point in foldinig
+std::vector<int> Game::get_actions(std::vector<std::string> history, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player){
+    std::vector<int> allowed_actions = {1};// c
+    if (3*bet_sizes[1 - player] + pot_size <= remaining_stacks[player])
+        allowed_actions.push_back(3); // r100
+    if (2*bet_sizes[1 - player] + 0.5*pot_size <= remaining_stacks[player])
+        allowed_actions.push_back(2); // r50
+    if (history.size() == 0 || history.back() != "a")
+        allowed_actions.push_back(4); // a
+    if (bet_sizes[1 - player] != 0)
+        allowed_actions.push_back(0); // f not disallowed but there is no point in foldinig
 
     return allowed_actions;
 }
@@ -186,29 +174,48 @@ std::pair<double, double> Game::get_utility(std::vector<double> remaining_stacks
 
 int Game::get_bucket(int round_num, int player){
     double hs_metric = ehs2(deck->getPlayerCards(player), deck->getCommunityCards(round_num));
-    return floor(NUM_BUCKETS*hs_metric);
+    return floor(NUM_BUCKETS*hs_metric); // bigger bucket better
+}
+
+int Game::get_init_bucket(int player)
+{
+    std::vector<int> cards = deck->getPlayerCards(player);
+    int card1 = std::max(cards[0]/4, cards[1]/4), card2 = std::min(cards[0]/4, cards[1]/4);
+
+    std::string handstring = rankStr[card1] + rankStr[card2];
+    if (cards[0]/4 != cards[1]/4)
+        handstring += (cards[0]%4 == cards[1]%4) ? "s" : "o";
+
+    int index = 168 - (std::find(STARTING_HAND_RANKINGS.begin(), STARTING_HAND_RANKINGS.end(), handstring) - STARTING_HAND_RANKINGS.begin());
+    return floor(index*NUM_BUCKETS/169);
 }
 
 
 void Game::train(int epochs){
     std::pair<double, double> utils = {0,0};
-    int progress = 0;
 
     std::printf("Starting regret minimization\n");
     auto t1 = Clock::now();
 
-
     for (int epoch = 1; epoch <= epochs; epoch++) {
         deck = new Deck();
         iter +=1;
+
         std::vector<std::string> emptyhist;
         std::vector<double> starting_stacks = {STARTING_STACK, STARTING_STACK};
         std::vector<double> blinds = {1, 1};
-        std::pair<double, double> res = cfr(root0, root1, emptyhist, starting_stacks, blinds, 0,  0, 1, 1);
+        root0->init_children();
+        root1->init_children();
+
+        int bucket0 = get_init_bucket(0), bucket1 = get_init_bucket(1);
+        std::pair<double, double> res = cfr(root0->children[bucket0], root1->children[bucket1], emptyhist, starting_stacks, blinds, 0, 0, 0, 1, 1);
         utils = std::make_pair(utils.first + res.first, utils.second + res.second);
 
+
         if (epoch % 1 == 0) {
-            std::printf("Epoch %d: %f %f in %ldns\n", epoch, utils.first, utils.second, std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - t1).count());
+            auto t2 = Clock::now();
+            std::printf("Epoch %d: %f %f in %fs\n", epoch, utils.first, utils.second, std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count()/1e9);
+            t1 = t2;
         }
     }
     std::printf("Completed regret minimization.\n");
