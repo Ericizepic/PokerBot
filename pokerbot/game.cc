@@ -33,6 +33,9 @@ std::pair<double, double> Game::cfr(
 
     if (is_non_terminal_round_end(history))
     {
+        r0->isChanceNode = true;
+        r1->isChanceNode = true;
+
         int next_round_num = (round_num==0) ? round_num + 3 : round_num + 1;
         std::vector<std::string> next_hist = history;
         next_hist.push_back("|");
@@ -50,7 +53,7 @@ std::pair<double, double> Game::cfr(
     std::vector<int> ACTIONS = get_actions(history, remaining_stacks, bet_sizes, pot_size, player);
     double u0 = 0, u1 = 0;
 
-    std::vector<double> strat = (player == 0) ? r0->get_strat() : r1->get_strat();
+    std::vector<double> strat = (player == 0) ? r0->get_strat(p0) : r1->get_strat(p1);
 
     for (auto i : ACTIONS)
     {
@@ -192,11 +195,9 @@ int Game::get_init_bucket(int player)
 
 
 void Game::train(int epochs){
-    std::pair<double, double> utils = {0,0};
-
     std::printf("Starting regret minimization\n");
     auto t1 = Clock::now();
-
+    double avgutil0 = 0, avgutil1 = 0;
     for (int epoch = 1; epoch <= epochs; epoch++) {
         deck = new Deck();
         iter +=1;
@@ -206,18 +207,22 @@ void Game::train(int epochs){
         std::vector<double> blinds = {1, 1};
         root0->init_children();
         root1->init_children();
+        root0->isChanceNode = true;
+        root1->isChanceNode = true;
 
         int bucket0 = get_init_bucket(0), bucket1 = get_init_bucket(1);
-        std::pair<double, double> res = cfr(root0->children[bucket0], root1->children[bucket1], emptyhist, starting_stacks, blinds, 0, 0, 0, 1, 1);
-        utils = std::make_pair(utils.first + res.first, utils.second + res.second);
+        std::pair<double, double> util = cfr(root0->children[bucket0], root1->children[bucket1], emptyhist, starting_stacks, blinds, 0, 0, 0, 1, 1);
+        avgutil0 += util.first;
+        avgutil1 += util.second;
 
-
-        if (epoch % 1 == 0) {
+        if (epoch % 5 == 0) {
             auto t2 = Clock::now();
-            std::printf("Epoch %d: %f %f in %fs\n", epoch, utils.first, utils.second, std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count()/1e9);
+            std::printf("Epoch %d: %f %f in %fs\n", epoch, avgutil0, avgutil1, std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count()/1e9);
             t1 = t2;
+            avgutil0 = 0, avgutil1 = 0;
         }
     }
     std::printf("Completed regret minimization.\n");
-    std::printf("Final strategy profile:");
+    std::printf("Saving final strategy profile");
+    root0->save_info_node("");
 }

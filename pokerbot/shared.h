@@ -7,6 +7,7 @@
 #include <exception>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 #define NUM_BUCKETS 5
 #define STARTING_STACK 30
@@ -195,7 +196,5 @@ double eval_runout(const int ourcard1, const int ourcard2, const std::vector<int
 double ehs2(const std::vector<int> &ourcards, const std::vector<int> &seenCommunityCards);
     
 int get_winning_player(const std::vector<int> &player0Cards, const std::vector<int> &player1Cards, const std::vector<int> &communityCards);
-
-
 
 #endif
