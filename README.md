@@ -1,12 +1,26 @@
 # PokerBot
-Poker bot
-
-Implementation of counter factual regret minimization with public chance sampling [[1]](#1) on the game of texas holdem. Several abstractions were
-used to reduce the number of game states [[2]](#2)
+Poker bot (Work in Progress)
 
 
-![alt text](image.png)
+## Overview
+Implementation of counter factual regret minimization with public chance sampling [[1]](#1) on the game of texas holdem. Pseudocode from  Several abstractions were used to reduce the number of game states [[2]](#2). The goal of the algorithm is to approximate a nash equilibirum strategy to the 2 person game of texas no limit holdem.
 
+
+## To Run
+
+Clone the repository, then run the following.
+
+```
+cd src
+make
+./cfrpoker
+```
+
+The algorithm will start running. Upon completion, we will save the computed strategy in a file called strat.txt. The node name is the history that defines the node (a sequence of player actions and chance buckets). The strategy probabilites are given at each node.
+
+## Next Steps
+
+Currently the project still is a poor approximation. Better parallelize and optimize code to allow for more iterations. Load parts of memory to hard drive to allow for more buckets.
 
 
 ## References
