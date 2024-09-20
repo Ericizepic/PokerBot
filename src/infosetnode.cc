@@ -2,7 +2,11 @@
 
 InfoSetNode::InfoSetNode() : strategySum(std::vector<double>(NUM_BUCKETS, 0)), regretSum(std::vector<double>(NUM_BUCKETS, 0)), children(std::vector<InfoSetNode*>(0, NULL)){}
 
-InfoSetNode::~InfoSetNode() { for (auto &child : children) delete child;}
+InfoSetNode::~InfoSetNode() { 
+    for (auto child : children) 
+        delete child;
+    children.clear();
+}
 
 void InfoSetNode::init_children() {
     for (int i = 0; i<NUM_BUCKETS; i++)

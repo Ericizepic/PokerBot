@@ -5,12 +5,12 @@ typedef std::chrono::high_resolution_clock Clock;
 
 Game::Game() : root0(new InfoSetNode()), root1(new InfoSetNode()), deck(nullptr), iter(0) {}
     
-Game::~Game() { delete root0; delete root1;}
+Game::~Game() { delete root0; delete root1; delete deck;}
 
 std::pair<double, double> Game::cfr(
     InfoSetNode* r0, 
     InfoSetNode* r1, 
-    std::vector<std::string> history,
+    std::vector<Action> history,
     std::vector<double> remaining_stacks, 
     std::vector<double> bet_sizes,
     double pot_size, 
@@ -37,34 +37,36 @@ std::pair<double, double> Game::cfr(
         r1->isChanceNode = true;
 
         int next_round_num = (round_num==0) ? round_num + 3 : round_num + 1;
-        std::vector<std::string> next_hist = history;
-        next_hist.push_back("|");
+        std::vector<Action> next_hist = history;
+        next_hist.push_back(NEXT_ROUND);
 
-        auto t = get_next_stacks_bets_pot("|", remaining_stacks, bet_sizes, pot_size, 2);
+        auto t = get_next_stacks_bets_pot(NEXT_ROUND, remaining_stacks, bet_sizes, pot_size, 2);
 
         int bucket0 = get_bucket(next_round_num, 0), bucket1 = get_bucket(next_round_num, 1);
 
         return cfr(r0->children[bucket0], r1->children[bucket1], next_hist, std::get<0>(t), std::get<1>(t), std::get<2>(t), next_round_num, 0, p0, p1);
     }
     
+
     // int player = get_player(history);
     std::vector<double> state_action_util_0(NUM_BUCKETS, 0);
     std::vector<double> state_action_util_1(NUM_BUCKETS, 0);
-    std::vector<int> ACTIONS = get_actions(history, remaining_stacks, bet_sizes, pot_size, player);
+    std::vector<Action> ACTIONS = get_actions(history, remaining_stacks, bet_sizes, pot_size, player);
     double u0 = 0, u1 = 0;
 
     std::vector<double> strat = (player == 0) ? r0->get_strat(p0) : r1->get_strat(p1);
 
     for (auto i : ACTIONS)
     {
-        std::vector<std::string> next_hist = history;
-        next_hist.push_back(ALL_ACTIONS[i]);
-
-        auto t = get_next_stacks_bets_pot(ALL_ACTIONS[i], remaining_stacks, bet_sizes, pot_size, player);
+        auto t = get_next_stacks_bets_pot(i, remaining_stacks, bet_sizes, pot_size, player);
         double nextp0 = (player == 0) ? strat[i]*p0 : p0;
         double nextp1 = (player == 1) ? strat[i]*p1 : p1;
 
-        std::pair<double, double> ua = cfr(r0->children[i], r1->children[i], next_hist, std::get<0>(t), std::get<1>(t) , std::get<2>(t), round_num, 1 - player, nextp0, nextp1);
+        int len1 = history.size();
+        history.push_back(i);
+        std::pair<double, double> ua = cfr(r0->children[i], r1->children[i], history, std::get<0>(t), std::get<1>(t) , std::get<2>(t), round_num, 1 - player, nextp0, nextp1);
+        history.pop_back();
+
         state_action_util_0[i] = ua.first;
         state_action_util_1[i] = ua.second;
         u0 += state_action_util_0[i]*strat[i];
@@ -86,35 +88,35 @@ std::pair<double, double> Game::cfr(
 }
 
 
-bool Game::is_non_terminal_round_end(std::vector<std::string> history){
+inline bool Game::is_non_terminal_round_end(std::vector<Action> history){
     int len = history.size();
     if (len < 2)
         return false;
     
-    bool both_player_has_acted = history[len - 2] != "|" && history[len - 1] != "|";
-    bool is_action_closed = history[len - 1] == "c";
+    bool both_player_has_acted = history[len - 2] != NEXT_ROUND && history[len - 1] != NEXT_ROUND;
+    bool is_action_closed = history[len - 1] == CALL;
 
     return both_player_has_acted && is_action_closed;
 }
 
 
-bool Game::is_terminal(std::vector<std::string> history, int round_num){
+inline bool Game::is_terminal(std::vector<Action> history, int round_num){
     int len = history.size();
 
     bool is_river_terminal = is_non_terminal_round_end(history) && round_num == 5;
-    bool is_all_in_call = len >= 2 && history[len-2] == "a" && history[len-2] == "c";
-    bool is_fold = len >= 1 && history[len-1] == "f";
+    bool is_all_in_call = len >= 2 && history[len-2] == ALL_IN && history[len-2] == CALL;
+    bool is_fold = len >= 1 && history[len-1] == FOLD;
 
     return is_river_terminal || is_all_in_call || is_fold;
 }
 
 
-std::tuple<std::vector<double>, std::vector<double>, double> Game::get_next_stacks_bets_pot(std::string action, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player){
+std::tuple<std::vector<double>, std::vector<double>, double> Game::get_next_stacks_bets_pot(Action action, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player){
     double next_pot_size = pot_size;
     std::vector<double> next_remaining_stacks = remaining_stacks;
     std::vector<double> next_bet_sizes = bet_sizes;
 
-    if (action == "|") // new round
+    if (action == NEXT_ROUND) // new round
     {
         next_remaining_stacks[0] -= bet_sizes[0];
         next_remaining_stacks[1] -= bet_sizes[1];
@@ -124,13 +126,13 @@ std::tuple<std::vector<double>, std::vector<double>, double> Game::get_next_stac
     }
     else
     {
-        if (action == "c")
+        if (action == CALL)
             next_bet_sizes[player] = bet_sizes[1  - player];
-        if (action == "r50")
+        if (action == RAISE50)
             next_bet_sizes[player] = 2*bet_sizes[1  - player] + 0.5*pot_size;
-        if (action == "r100")
+        if (action == RAISE100)
             next_bet_sizes[player] = 3*bet_sizes[1  - player] + pot_size;
-        if (action == "a")
+        if (action == ALL_IN)
             next_bet_sizes[player] = remaining_stacks[player];
     }
     
@@ -138,16 +140,16 @@ std::tuple<std::vector<double>, std::vector<double>, double> Game::get_next_stac
 }
 
 
-std::vector<int> Game::get_actions(std::vector<std::string> history, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player){
-    std::vector<int> allowed_actions = {1};// c
+std::vector<Action> Game::get_actions(std::vector<Action> history, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player){
+    std::vector<Action> allowed_actions = {CALL};// c
     if (3*bet_sizes[1 - player] + pot_size <= remaining_stacks[player])
-        allowed_actions.push_back(3); // r100
+        allowed_actions.push_back(RAISE100); // r100
     if (2*bet_sizes[1 - player] + 0.5*pot_size <= remaining_stacks[player])
-        allowed_actions.push_back(2); // r50
-    if (history.size() == 0 || history.back() != "a")
-        allowed_actions.push_back(4); // a
+        allowed_actions.push_back(RAISE50); // r50
+    if (history.size() == 0 || history.back() != ALL_IN)
+        allowed_actions.push_back(ALL_IN); // a
     if (bet_sizes[1 - player] != 0)
-        allowed_actions.push_back(0); // f not disallowed but there is no point in foldinig
+        allowed_actions.push_back(FOLD); // f not disallowed but there is no point in foldinig
 
     return allowed_actions;
 }
@@ -175,9 +177,9 @@ std::pair<double, double> Game::get_utility(std::vector<double> remaining_stacks
 }
 
 
-int Game::get_bucket(int round_num, int player){
+inline int Game::get_bucket(int round_num, int player){
     double hs_metric = ehs2(deck->getPlayerCards(player), deck->getCommunityCards(round_num));
-    return floor(NUM_BUCKETS*hs_metric); // bigger bucket better
+    return std::min((int)floor(NUM_BUCKETS*hs_metric), NUM_BUCKETS - 1); // bigger bucket better
 }
 
 int Game::get_init_bucket(int player)
@@ -202,7 +204,7 @@ void Game::train(int epochs){
         deck = new Deck();
         iter +=1;
 
-        std::vector<std::string> emptyhist;
+        std::vector<Action> emptyhist;
         std::vector<double> starting_stacks = {STARTING_STACK, STARTING_STACK};
         std::vector<double> blinds = {1, 1};
         root0->init_children();

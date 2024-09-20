@@ -3,7 +3,7 @@ Poker bot (Work in Progress)
 
 
 ## Overview
-Implementation of counter factual regret minimization with public chance sampling [[1]](#1) on the game of texas holdem. Pseudocode from  Several abstractions were used to reduce the number of game states [[2]](#2). The goal of the algorithm is to approximate a nash equilibirum strategy to the 2 person game of texas no limit holdem.
+Implementation of counter factual regret minimization with public chance sampling [[1]](#1) on the game of texas holdem. Pseudocode from [[2]](#2). The goal of the algorithm is to approximate a nash equilibirum strategy to the 2 person game of texas no limit holdem. Due to the incredibly large number of possible states, exactly simulating the full game is intractable. Several abstractions were used to reduce the number of game states.
 
 
 ## To Run
@@ -28,4 +28,3 @@ Currently the project still is a poor approximation. Better parallelize and opti
 DJohanson, Michael, et al. "Efficient Nash equilibrium approximation through Monte Carlo counterfactual regret minimization." Aamas. 2012.
 <a id="2">[2]</a> 
 Zinkevich, Martin, et al. "Regret minimization in games with incomplete information." Advances in neural information processing systems 20 (2007).
-

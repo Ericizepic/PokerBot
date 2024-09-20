@@ -24,7 +24,7 @@ struct Game{
     std::pair<double, double> cfr(
         InfoSetNode* r0, 
         InfoSetNode* r1, 
-        std::vector<std::string> history,
+        std::vector<Action> history,
         std::vector<double> remaining_stacks, 
         std::vector<double> bet_sizes,
         double pot_size, 
@@ -33,12 +33,12 @@ struct Game{
         double p0, 
         double p1);
 
-    bool is_non_terminal_round_end(std::vector<std::string> history);
-    bool is_terminal(std::vector<std::string> history, int round_num);
-    std::tuple<std::vector<double>, std::vector<double>, double> get_next_stacks_bets_pot(std::string action, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player);
-    std::vector<int> get_actions(std::vector<std::string> history, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player);
+    inline bool is_non_terminal_round_end(std::vector<Action> history);
+    inline bool is_terminal(std::vector<Action> history, int round_num);
+    std::tuple<std::vector<double>, std::vector<double>, double> get_next_stacks_bets_pot(Action action, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player);
+    std::vector<Action> get_actions(std::vector<Action> history, std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size, int player);
     std::pair<double, double> get_utility(std::vector<double> remaining_stacks, std::vector<double> bet_sizes, double pot_size);
-    int get_bucket(int round_num, int player);
+    inline int get_bucket(int round_num, int player);
     int get_init_bucket(int player);
     void train(int epochs);
 };

@@ -10,8 +10,10 @@
 #include <fstream>
 
 #define NUM_BUCKETS 5
-#define STARTING_STACK 30
+#define STARTING_STACK 25
 const std::vector<std::string> ALL_ACTIONS = {"f", "c", "r50", "r100", "a"};
+enum Action { FOLD = 0, CALL = 1, RAISE50 = 2, RAISE100 = 3, ALL_IN = 4, NEXT_ROUND = 5};
+
 
 const std::vector<std::string> STARTING_HAND_RANKINGS = {
     "AA",
@@ -50,7 +52,7 @@ const std::vector<std::string> STARTING_HAND_RANKINGS = {
     "A6s",
     "QJo",
     "66",
-    "K8o",
+    "K8s",
     "T8s",
     "A2s",
     "98s",
@@ -61,7 +63,7 @@ const std::vector<std::string> STARTING_HAND_RANKINGS = {
     "KTo",
     "55",
     "JTo",
-    "78s",
+    "87s",
     "QTo",
     "44",
     "22",
@@ -96,7 +98,7 @@ const std::vector<std::string> STARTING_HAND_RANKINGS = {
     "J9o",
     "K9o",
     "J5s",
-    "Q9s",
+    "Q9o",
     "43s",
     "74s",
     "J4s",
@@ -123,7 +125,7 @@ const std::vector<std::string> STARTING_HAND_RANKINGS = {
     "93s",
     "J8o",
     "A3o",
-    "62o",
+    "62s",
     "92s",
     "K8o",
     "A6o",
