@@ -9,11 +9,14 @@ InfoSetNode::~InfoSetNode() {
 }
 
 void InfoSetNode::init_children() {
-    for (int i = 0; i<NUM_BUCKETS; i++)
+    if (children.size() != 0)
     {
-        InfoSetNode* child = new InfoSetNode();
-        children.push_back(child);
+        throw std::invalid_argument("children has already been initalized");
     }
+
+    children = std::vector<InfoSetNode*>(NUM_BUCKETS, nullptr);
+    for (int i = 0; i<NUM_BUCKETS; i++)
+        children[i] = new InfoSetNode();
 }
 
 std::vector<double> InfoSetNode::get_strat(double discount){

@@ -207,8 +207,10 @@ void Game::train(int epochs){
         std::vector<Action> emptyhist;
         std::vector<double> starting_stacks = {STARTING_STACK, STARTING_STACK};
         std::vector<double> blinds = {1, 1};
-        root0->init_children();
-        root1->init_children();
+        if (root0->children.size() == 0)
+            root0->init_children();
+        if (root1->children.size() == 0)
+            root1->init_children();
         root0->isChanceNode = true;
         root1->isChanceNode = true;
 
