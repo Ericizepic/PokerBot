@@ -265,13 +265,13 @@ nlohmann::json Game::save(InfoSetNode* r0, InfoSetNode* r1, std::string history,
     }
     else
     {
-        std::vector<double> avgstrat = (player == 0) ? r0->get_average_strategy() : r1->get_average_strategy();
+        std::vector<double> strat = (player == 0) ? r0->get_average_strategy() : r1->get_average_strategy();
         std::vector<double> regretSum = (player == 0) ? r0->regretSum : r1->regretSum;
         int visitCount = (player == 0) ? r0->visitCount : r1->visitCount;
 
         result["_id"] = history;
         result["_visited"] = visitCount;
-        result["_strat"] = avgstrat;
+        result["_strat"] = strat;
         result["_regretSum"] = regretSum;
 
 

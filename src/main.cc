@@ -1,4 +1,5 @@
 #include "game.h"
+#include <omp.h>
 
 int main()
 {
