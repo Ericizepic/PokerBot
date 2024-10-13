@@ -1,12 +1,12 @@
 CXX = g++
-CXXFLAGS = -I ../PokerHandEvaluator/cpp/include/ -std=c++11 -O3 -o cfrpoker -m64
+CXXFLAGS = -I ../PokerHandEvaluator/cpp/include/ -I ../json/include/ -std=c++11 -O3 -flto -m64 -fopenmp
 SRC = main.cc deck.cc game.cc shared.cc infosetnode.cc
 
 # Output executable
 TARGET = cfrpoker
 
 # Libraries
-LIBS = libpheval.a
+LIBS = libpheval.a 
 
 # Build target
 all: $(TARGET)

@@ -72,6 +72,10 @@
         "variant": "cpp",
         "future": "cpp",
         "shared_mutex": "cpp",
-        "cfenv": "cpp"
-    }
+        "cfenv": "cpp",
+        "csignal": "cpp",
+        "ranges": "cpp",
+        "span": "cpp"
+    },
+    "cmake.sourceDirectory": "/home/ericdu/PokerBot/PokerHandEvaluator/cpp"
 }

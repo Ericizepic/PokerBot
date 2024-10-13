@@ -10,6 +10,7 @@
 #include "deck.h"
 #include "infosetnode.h"
 #include "shared.h"
+#include <nlohmann/json.hpp>
 
 struct Game{
     InfoSetNode* root0;
@@ -30,8 +31,8 @@ struct Game{
         double pot_size, 
         int round_num, 
         int player,
-        double p0, 
-        double p1);
+        long double p0, 
+        long double p1);
 
     inline bool is_non_terminal_round_end(std::vector<Action> history);
     inline bool is_terminal(std::vector<Action> history, int round_num);
@@ -41,6 +42,7 @@ struct Game{
     inline int get_bucket(int round_num, int player);
     int get_init_bucket(int player);
     void train(int epochs);
+    nlohmann::json save(InfoSetNode* r0, InfoSetNode* r1, std::string history, int player);
 };
 
 

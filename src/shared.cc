@@ -27,17 +27,24 @@ double eval_runout(const int ourcard1, const int ourcard2, const std::vector<int
     const int ourrank = get_rank(ourcard1, ourcard2, finalCommunityCards);
     double num = 0;
     double denom = (unseenbyriver.size() - 1)*(unseenbyriver.size())/2.0;
+    int size = unseenbyriver.size();
 
-    for (int m = 0; m< unseenbyriver.size(); m++) {
-        for (int n = m + 1; n<unseenbyriver.size(); n++)
-        {
-            int opprank = get_rank(unseenbyriver[m], unseenbyriver[n], finalCommunityCards);
-            int val = 0;
-            if (ourrank < opprank) val = 1;
-            else if (ourrank == opprank) val = 0.5;
+    omp_set_num_threads(14);
 
-            num += val;
+    #pragma omp parallel for reduction(+: num)
+    for (int i = 0; i < size * (size - 1) / 2; i++) {
+        int m = i / (size - 1);
+        int n = i % (size - 1) + 1 + m;
+        if (n >= size) {
+            m++;
+            n = m + 1;
         }
+        int opprank = get_rank(unseenbyriver[m], unseenbyriver[n], finalCommunityCards);
+        int val = 0;
+        if (ourrank < opprank) val = 1;
+        else if (ourrank == opprank) val = 0.5;
+
+        num += val;
     }
     return num/denom;
 }
@@ -51,27 +58,36 @@ double ehs2(const std::vector<int> &ourcards, const std::vector<int> &seenCommun
     
     if (seenCommunityCards.size() == 3)
     {
-        #pragma omp parallel for reduction(+: res)
-        for (int i = 0; i< unseen.size(); i++) {
-            for (int j = i + 1; j<unseen.size(); j++)
+        std::vector<int> finalCommunityCards = seenCommunityCards; // Create local copies of vectors and reserve space to avoid reallocations
+        finalCommunityCards.reserve(seenCommunityCards.size() + 2); // Reserve space for 2 additional cards
+
+        std::vector<int> unseenbyriver = unseen;
+    
+        // We no longer need to modify `unseenbyriver` dynamically
+        int unseenSize = unseen.size();
+        for (int i = 0; i< 47; i++) {
+            for (int j = i + 1; j<47; j++)
             {
                 int turn = unseen[i], river = unseen[j];
-                std::vector<int> finalCommunityCards = seenCommunityCards;
                 finalCommunityCards.push_back(turn);
                 finalCommunityCards.push_back(river);
-                std::vector<int> unseenbyriver = unseen;
                 unseenbyriver.erase(remove(unseenbyriver.begin(), unseenbyriver.end(), turn), unseenbyriver.end());
                 unseenbyriver.erase(remove(unseenbyriver.begin(), unseenbyriver.end(), river), unseenbyriver.end());
 
                 double hs = eval_runout(ourcards[0], ourcards[1], finalCommunityCards, unseenbyriver);
                 res += hs*hs;
+
+                finalCommunityCards.pop_back();
+                finalCommunityCards.pop_back();
+                unseenbyriver.push_back(turn);
+                unseenbyriver.push_back(river);
             }
         }
-        sum = (unseen.size())*(unseen.size() - 1)/2;
+        sum = 1081;//(47)*(46)/2
     }
     if (seenCommunityCards.size() == 4)
     {
-        for (int i = 0; i< unseen.size(); i++) {
+        for (int i = 0; i< 46; i++) {
             int river = unseen[i];
             std::vector<int> finalCommunityCards = seenCommunityCards;
             finalCommunityCards.push_back(river);
@@ -80,8 +96,8 @@ double ehs2(const std::vector<int> &ourcards, const std::vector<int> &seenCommun
 
             double hs = eval_runout(ourcards[0], ourcards[1], finalCommunityCards, unseenbyriver);
             res += hs*hs;
-            sum +=1;
         }
+        sum = 46;
     }
     if (seenCommunityCards.size() == 5)
     {
@@ -89,7 +105,7 @@ double ehs2(const std::vector<int> &ourcards, const std::vector<int> &seenCommun
         std::vector<int> unseenbyriver = unseen;
         double hs = eval_runout(ourcards[0], ourcards[1], finalCommunityCards, unseenbyriver);
         res += hs*hs;
-        sum +=1;
+        sum = 1;
         
     }
     return res/sum;

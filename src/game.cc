@@ -16,8 +16,8 @@ std::pair<double, double> Game::cfr(
     double pot_size, 
     int round_num, 
     int player,
-    double p0, 
-    double p1)
+    long double p0, 
+    long double p1)
 {
     if (is_terminal(history, round_num))
         return get_utility(remaining_stacks, bet_sizes, pot_size);
@@ -53,14 +53,14 @@ std::pair<double, double> Game::cfr(
     std::vector<double> state_action_util_1(NUM_BUCKETS, 0);
     std::vector<Action> ACTIONS = get_actions(history, remaining_stacks, bet_sizes, pot_size, player);
     double u0 = 0, u1 = 0;
-
     std::vector<double> strat = (player == 0) ? r0->get_strat(p0) : r1->get_strat(p1);
 
     for (auto i : ACTIONS)
     {
         auto t = get_next_stacks_bets_pot(i, remaining_stacks, bet_sizes, pot_size, player);
-        double nextp0 = (player == 0) ? strat[i]*p0 : p0;
-        double nextp1 = (player == 1) ? strat[i]*p1 : p1;
+        long double nextp0 = (player == 0) ? strat[i]*p0 : p0;
+        long double nextp1 = (player == 1) ? strat[i]*p1 : p1;
+
 
         int len1 = history.size();
         history.push_back(i);
@@ -76,12 +76,12 @@ std::pair<double, double> Game::cfr(
     if (player == 0)
     {
         for (int i = 0; i<NUM_BUCKETS; i++)
-            r0->regretSum[i] = (iter*r0->regretSum[i] + p1*(state_action_util_0[i] - u0))/(iter + 1);
+            r0->regretSum[i] = r0->regretSum[i] + p1*(state_action_util_0[i] - u0);
     }
     else
     {
         for (int i = 0; i<NUM_BUCKETS; i++)
-            r1->regretSum[i] = (iter*r1->regretSum[i] + p0*(state_action_util_1[i] - u1))/(iter + 1);
+            r1->regretSum[i] = r1->regretSum[i] + p0*(state_action_util_1[i] - u1);
     }
 
    return std::make_pair(u0,u1);
@@ -228,5 +228,61 @@ void Game::train(int epochs){
     }
     std::printf("Completed regret minimization.\n");
     std::printf("Saving final strategy profile");
-    root0->save_info_node("");
+
+    std::ofstream save_file;
+    save_file.open("strat.json", std::ofstream::app);
+    nlohmann::json result = save(root0, root1, "", 0);
+    save_file << result.dump(2) << std::endl;
+    save_file.close();
+}
+
+
+nlohmann::json Game::save(InfoSetNode* r0, InfoSetNode* r1, std::string history, int player)
+{
+    nlohmann::json result;
+
+    if (r0->children.size() > 0 || r1->children.size() > 0)
+    {
+        if (r0->children.size() == 0)
+        {
+            r0->init_children();
+        }
+
+        if (r1->children.size() == 0)
+        {
+            r1->init_children();
+        }
+    }
+
+    if (r0->isChanceNode)
+    {
+        result["_id"] = "Chance";
+        for (int i = 0; i<NUM_BUCKETS; i++)
+        {
+            std::string new_history = history + std::to_string(i);
+            result["children"][i] = save(r0->children[i], r1->children[i], new_history, 0);
+        }
+    }
+    else
+    {
+        std::vector<double> avgstrat = (player == 0) ? r0->get_average_strategy() : r1->get_average_strategy();
+        std::vector<double> regretSum = (player == 0) ? r0->regretSum : r1->regretSum;
+        int visitCount = (player == 0) ? r0->visitCount : r1->visitCount;
+
+        result["_id"] = history;
+        result["_visited"] = visitCount;
+        result["_strat"] = avgstrat;
+        result["_regretSum"] = regretSum;
+
+
+        if (r0->children.size() > 0 || r1->children.size() > 0)
+        {
+            for (int i = 0; i<NUM_BUCKETS; i++) 
+            {
+                std::string new_history = history + ALL_ACTIONS[i];
+                result["children"][i] = save(r0->children[i], r1->children[i], new_history, 1 - player);
+            }
+        }
+    }
+    return result;
 }
